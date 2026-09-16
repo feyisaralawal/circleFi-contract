@@ -499,3 +499,6 @@ impl Circle {
 }
 
 mod test;
+
+#[cfg(test)]
+mod proptest_harness;

@@ -156,6 +156,38 @@ The suite covers the full lifecycle, both default paths, the authorisation
 boundary, and an accounting invariant asserting that after a complete cycle
 every member is square to the stroop and the contract holds nothing.
 
+### Property-based testing
+
+In addition to the hand-written scenarios, `contracts/circle/src/proptest_harness.rs`
+runs a property-based harness using [proptest](https://docs.rs/proptest). It
+generates random circles — varying member counts (3–24), contribution sizes
+(1–1 000 000 stroops), round durations (1 s – 30 days) — and executes full
+lifecycles with random per-member, per-round actions:
+
+| Action | Meaning |
+|--------|---------|
+| `Pay` | Member contributes on time |
+| `Default` | Member skips; deposit covers the gap (or is exhausted) |
+| `DefaultThenTopUp` | Member skips then calls `top_up` to restore the deposit |
+
+After every run the harness asserts four invariants:
+
+| ID | Invariant |
+|----|-----------|
+| I-1 | `status == Complete` after the last round |
+| I-2 | Every member's `received` flag is `true` |
+| I-3 | Contract token balance is `0` after all withdrawals |
+| I-4 | Token conservation: `Σ balance_after == Σ balance_before_join` |
+
+Counterexamples are shrunk automatically by proptest to the smallest failing
+input. If the harness finds a bug, the output names the violated invariant and
+the exact `CircleParams` and action matrix that triggered it.
+
+```sh
+cargo test -p circlefi-circle          # runs scenario tests + property tests
+PROPTEST_CASES=1000 cargo test         # run more cases for a deeper search
+```
+
 ## Licence
 
 Apache-2.0.
